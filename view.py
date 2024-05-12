@@ -6,7 +6,7 @@ from model import *
 class View(QWidget):
     def __init__(self) -> None:
         """
-        gui for our calculator, everything the window needs like geomtry to mode and even title.
+        gui for our calculator, everything the window/app needs like geomtry to mode and even title.
         """
         super().__init__()
         self.setWindowTitle('Calculator1.0')
@@ -15,18 +15,11 @@ class View(QWidget):
         self.last_answer = "0"
         self.shape_inputs = {}
         self.last_focused_input = None
-        self.create_ui()
-        self.update_mode()
-    
-    def create_ui(self) -> None:
-        """
-        sets up the ui parts which includes fields, buttons, and even layout
-        """
         self.layout = QVBoxLayout()
         self.ans_label = QLabel("Ans = 0")
         self.ans_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.layout.addWidget(self.ans_label)
-        self.input_display = ClickOnlyLineEdit() 
+        self.input_display = ClickOnlyLineEdit()
         self.input_display.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.layout.addWidget(self.input_display)
         self.setup_ModeShapes()
@@ -34,6 +27,7 @@ class View(QWidget):
         self.setup()
         self.layout.addLayout(self.buttons)
         self.setLayout(self.layout)
+        self.update_mode()
 
     def setup_ModeShapes(self) -> None:
         """
@@ -45,7 +39,7 @@ class View(QWidget):
         self.shapes = ["Circle", "Square", "Rectangle", "Triangle"]
         for shape in self.shapes:
             radio_button = QRadioButton(shape)
-            toggle_lambda = lambda checked, shape=shape: self.toggle_shape_input(checked, shape)
+            toggle_lambda = lambda checked, shape=shape: self.toggle_shape(checked, shape)
             radio_button.toggled.connect(toggle_lambda)
             self.radio_group.addButton(radio_button)
             self.shape_selection.addWidget(radio_button)
@@ -75,31 +69,48 @@ class View(QWidget):
     def setup(self) -> None:
         """
         Our buttons which are basically formatted as a calculator
-        mainly our input button
+        mainly our buttons layout, using pyqt6
         """
-        btn_labels = [
-            ('Clear', 0, 0), ('Mode', 0, 1), ('Del', 0, 2), ('/', 0, 3),
-            ('7', 1, 0), ('8', 1, 1), ('9', 1, 2), ('*', 1, 3),
-            ('4', 2, 0), ('5', 2, 1), ('6', 2, 2), ('-', 2, 3),
-            ('1', 3, 0), ('2', 3, 1), ('3', 3, 2), ('+', 3, 3),
-            ('+/-', 4, 0), ('0', 4, 1), ('.', 4, 2), ('=', 4, 3),
-            ('Ans', 5, 0)
-        ]
-        for label, row, col in btn_labels:
-            button = QPushButton(label)
+        self.buttons = QGridLayout()
+        self.buttons.addWidget(QPushButton('Clear'), 0, 0)
+        self.buttons.addWidget(QPushButton('Mode'), 0, 1)
+        self.buttons.addWidget(QPushButton('Del'), 0, 2)
+        self.buttons.addWidget(QPushButton('/'), 0, 3)
+        self.buttons.addWidget(QPushButton('7'), 1, 0)
+        self.buttons.addWidget(QPushButton('8'), 1, 1)
+        self.buttons.addWidget(QPushButton('9'), 1, 2)
+        self.buttons.addWidget(QPushButton('*'), 1, 3)
+        self.buttons.addWidget(QPushButton('4'), 2, 0)
+        self.buttons.addWidget(QPushButton('5'), 2, 1)
+        self.buttons.addWidget(QPushButton('6'), 2, 2)
+        self.buttons.addWidget(QPushButton('-'), 2, 3)
+        self.buttons.addWidget(QPushButton('1'), 3, 0)
+        self.buttons.addWidget(QPushButton('2'), 3, 1)
+        self.buttons.addWidget(QPushButton('3'), 3, 2)
+        self.buttons.addWidget(QPushButton('+'), 3, 3)
+        self.buttons.addWidget(QPushButton('+/-'), 4, 0)
+        self.buttons.addWidget(QPushButton('0'), 4, 1)
+        self.buttons.addWidget(QPushButton('.'), 4, 2)
+        self.buttons.addWidget(QPushButton('='), 4, 3)
+        ans_button = QPushButton('Ans')
+        self.buttons.addWidget(ans_button, 5, 0, 1, 4)
+
+        for i in range(self.buttons.count()):
+            button = self.buttons.itemAt(i).widget()
             button.setFixedSize(50, 50)
-            self.buttons.addWidget(button, row, col)
             button.clicked.connect(self.handle_clicks)
+        self.layout.addLayout(self.buttons)
     
     def handle_clicks(self) -> None:
         """
         Handles button clicks, performing operations based on the button's label
         Automatically clears any error message when any input is made
         Prevents operators from being added at the start of an input unless valid
+        mainly exceptions
         """
         button = self.sender()
         label = button.text()
-
+        
         if self.is_standard_mode:
             target_display = self.input_display
         else:
@@ -155,27 +166,24 @@ class View(QWidget):
             else:
                 self.input_display.insert(self.last_answer)
 
-    def use_last_answer(self) -> None:
-        """
-        Inserts last answer into a input display for further calculation
-        """
-        self.input_display.insert(self.last_answer)
-
     def toggle_sign(self, target_display) -> None:
         """
         Toggles a sign of the current input if it's numeric
+            
         """
         current_text = target_display.text()
         try:
             value = float(current_text)
             if value != 0:
-                target_display.setText(str(-value))
+                negated_value = str(-value)
+                target_display.setText(negated_value) 
         except ValueError:
             pass
 
-    def toggle_shape_input(self, checked, shape) -> None:
+    def toggle_shape(self, checked, shape) -> None:
         """
         Toggle input fields for all the shapes
+            Done so that it focuses on the field of the mode selected
         """
         if checked:
             for input_field in self.shape_inputs[shape]:
@@ -188,7 +196,8 @@ class View(QWidget):
 
     def update_mode(self) -> None:
         """
-        Updates UI parts based on the mode, shape mode and normal mode, and refreshes mode visibility.
+        Updates UI parts based on the mode, shape mode and normal mode, and refreshes mode visibility
+            Example: Shape mode disables standard mode fields, Standard mode disables Shape fields
         """
         for button in self.radio_group.buttons():
             button.setVisible(not self.is_standard_mode)
@@ -196,7 +205,8 @@ class View(QWidget):
         for shape, inputs in self.shape_inputs.items():
             if isinstance(inputs, tuple):
                 for input_field in inputs:
-                    input_field.setVisible(not self.is_standard_mode and button.isChecked())
+                    is_visible = not self.is_standard_mode and button.isChecked()
+                    input_field.setVisible(is_visible)
             else:
                 inputs.setVisible(not self.is_standard_mode and button.isChecked())
 
@@ -211,7 +221,9 @@ class View(QWidget):
         """
         Removes last character from the input display
         """
-        self.input_display.setText(self.input_display.text()[:-1])
+        current_text = self.input_display.text()
+        modified_text = current_text[:-1]
+        self.input_display.setText(modified_text)
 
     def calculate_result(self) -> None:
         """
@@ -227,7 +239,7 @@ class View(QWidget):
 
     def calculate_shape(self) -> None:
         """
-        Calculate area of selected shape.
+        Calculate area of selected shape
         """
         shape_function = {'Circle': circle, 'Square': square, 'Rectangle': rectangle, 'Triangle': triangle}
         selected_shape = self.radio_group.checkedButton().text() if self.radio_group.checkedButton() else None
@@ -263,7 +275,7 @@ class View(QWidget):
 
     def enable_answer_button(self, enable: bool) -> None:
         """
-        Enable or disable the Answer button based on validation.
+        Enable or disable the Answer button based on if there is error or not
         """
         for i in range(self.buttons.count()):
             button = self.buttons.itemAt(i).widget()
@@ -277,22 +289,23 @@ class ClickOnlyLineEdit(QLineEdit):
 
     def keyPressEvent(self, event):
         """
-        Override to prevent keyboard input.
+        prevent keyboard input
         """
         pass
 
     def contextMenuEvent(self, event):
         """
-        Override to disable context menu, preventing right-click copy-paste operations.
+        preventing right-click copy-paste operations
         """
         pass
     
     def mousePressEvent(self, event):
         """
-        Handle mouse press events; mainly to set focus and update last focused input in the parent.
+        mainly to set focus and update last focused input in the parent
         """
         super().mousePressEvent(event)
         self.setFocus()
         if hasattr(self.parent(), 'last_focused_input'):
             self.parent().last_focused_input = self
     
+   
